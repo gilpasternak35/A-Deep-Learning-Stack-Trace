@@ -17,7 +17,7 @@ def turing_test(model) -> bool:
 	h_answers = (1,2,3,4,5) # load some doc here
 
 	# Have ChatGPT / human decide
-	print(f"Q1: {has_tricked(q1, m_answers[0], h_answers[0], 1}")
+	print(f"Q1: {has_tricked(q1, m_answers[0], h_answers[0], 1)}")
 
 	# do same for remaining questions 	
 
