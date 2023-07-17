@@ -22,7 +22,7 @@ def bpe_encoding(document: str, k: int = 10):
 			pair = string_by_char[i] + string_by_char[i+1]
 
 			# ensuring pairs added are only within a single word
-			if ' ' not in pair:
+			if ' ' not in pair and '\n' not in pair:
 				# upddating counts and setting to 1 if not previously seen
 				adj_pairs_counts[pair] = adj_pairs_counts.get(pair, 0) + 1
 
@@ -31,8 +31,6 @@ def bpe_encoding(document: str, k: int = 10):
 		# creating heap of adjacent pairs
 		for pair, count in adj_pairs_counts.items():
 			heapq.heappush(adj_pairs_heap, (-count, pair))
-
-		print(adj_pairs_heap)
 
 
 		# obtaining most frequent adjacent pair
@@ -45,7 +43,7 @@ def bpe_encoding(document: str, k: int = 10):
 		c = 0
 
 		# merging most frequent pair and updating vocab
-		while c < len(string_by_char) - 2:
+		while c <= len(string_by_char) - 2:
 			# ie need to be merged, merging and updating
 			if string_by_char[c] + string_by_char[c+1] == most_freq_pair[1]:
 				string_by_char[c] = string_by_char[c] + string_by_char[c+1]
@@ -55,18 +53,29 @@ def bpe_encoding(document: str, k: int = 10):
 	# printing groupings
 	return groupings
 
-def tokenize_by_groupings(text: str, groupings: list) -> list:
+def tokenize_by_groupings(text: str, groupings: list, k: int) -> list:
 	"""
 	Takes a string and tokenizes it by byte pair encoding groupings (goal: get to words without lexicon)
 	"""
 	# Traverse through text and tokenize by groupings when possible
-	for grouping in groupings:
-		# splitting by grouping
-		text = text.split(grouping)
+	text_as_chars = [char for char in text]
 
-		#
-				
-		
+	# k merges of any two found characters in the text
+	for i in range(k):
+		# counter to keep track of index (while so that no preset length) - retraverse every time
+		i = 0
+		while i <= len(text_as_chars) - 2:
+			# splitting by grouping
+			if text_as_chars[i] + text_as_chars[i+1] in groupings:
+				# if grouping present, merge the two characters and delete the next index
+				text_as_chars[i] = text_as_chars[i] + text_as_chars[i+1]
+				del text_as_chars[i+1]
+
+			# incrementing counter
+			i += 1
+
+	# returning tokenized strings with found substrings merged together
+	return text_as_chars
 
 
 if __name__ == "__main__":
@@ -74,10 +83,10 @@ if __name__ == "__main__":
 	parser = ArgumentParser("BPE Encoding", description="Computes BPE Encoding of a given document")
 	parser.add_argument("--document", type=str, help="Document to be encoded", required=True)
 	parser.add_argument("-k", type=int, help="Number of iterations to run BPE", default=10, required=False)
-	parser.add_argument("-s", type=bool, help="Input string to tokenize", default="Mary had a little lamb, wow what a world", required=False)
+	parser.add_argument("-s", type=str, help="Input string to tokenize", default="Mary had a little lamb, wow what a world", required=False)
 
 	# argparse based bpe encoding
 	groupings = bpe_encoding(parser.parse_args().document, parser.parse_args().k)
 
 	# returning actual tokenization
-	print(tokenize_by_groupings(parser.parse_args().s, groupings))
+	print(tokenize_by_groupings(parser.parse_args().s, groupings, parser.parse_args().k))
