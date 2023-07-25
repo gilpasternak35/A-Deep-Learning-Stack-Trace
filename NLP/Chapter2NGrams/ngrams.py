@@ -12,7 +12,7 @@ def preprocess_sequence(sequence: str) -> str:
     returns:
         string of words with no punctuation, newlines, or lowercase
     """
-    return sequence.lower().translate(str.maketrans('', '', string.punctuation)).replace('\n', ' ')
+    return sequence.lower().translate(str.maketrans('', '', string.punctuation)).replace('\n', ' ').strip()
 
 
 def get_sequence_probability(sequence: str, corpus_counts: dict, n_gram_size: int) -> float:
@@ -40,16 +40,35 @@ def get_sequence_probability(sequence: str, corpus_counts: dict, n_gram_size: in
     for counter in range(0, len(tokenized)-n_gram_size+1):
         # obtaining n-gram
         n_gram = " ".join(tokenized[counter:counter+n_gram_size])
-        print(n_gram)
-        final_prob *= corpus_counts.get(n_gram, 0) / sum_n_gram_counts
 
+        final_prob *= corpus_counts.get(n_gram, 0) / sum_n_gram_counts
     # returning final probability
     return final_prob
     
 
-def get_next_word_prediction(sequence: str, corpus: str, n_gram_size: int) -> float:
+def get_next_word_prediction(sequence: str, corpus: str, n_gram_size:int = 2) -> float:
     """Returns n-gram prediction for the next word given a certain text corpus"""
-    pass
+
+    # reprocessing to get counts dict for larger sequences (n-grams plus sequence)
+    corpus_n_grams = preprocess_corpus(corpus, n_gram_size)
+    probs = []
+    
+    # checking every extension of sequence
+    for word in corpus_n_grams.keys():
+
+        # figuring out sequence with next word
+        current_seq = sequence + ' ' + word
+
+        # getting probability of sequence with word and appending to list
+        current_seq_prob = get_sequence_probability(current_seq, corpus_n_grams, n_gram_size)
+        probs.append((current_seq_prob, current_seq))
+
+    # custom sorting for sequence probabilities
+    probs  = sorted(probs, reverse=True, key=lambda x: x[0])
+
+    # returning most likely sequence
+    return probs[0][1]
+
 
 def preprocess_corpus(corpus: str, n_gram_size: int) -> dict:
     """
@@ -98,7 +117,9 @@ if __name__ == "__main__":
 
     corpus_counts = preprocess_corpus(corpus, args.n_gram)
 
+
     # 2. use corpus to return the probability of the sequence
     print(get_sequence_probability(proc_seq, corpus_counts, args.n_gram))
+    print(f"Next word prediction: {get_next_word_prediction(proc_seq, corpus, args.n_gram)}")
     
     # 3. predict next word in the sequence

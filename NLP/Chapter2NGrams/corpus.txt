@@ -2,3 +2,35 @@ nice nice very nice so many people in the same device
 what makes you think that a writer isn't a drug dealer?
 eleanor rigby picks up the rice in a church where a wedding has been, lives in a dream
 best, you've got to be the best, you've got to change the world, your number has been called
+Linear Equation - an equation to which the solution is an entire line of number
+For instance, the set of solutions to 2x-2y = 0 is the line x=y, which is the equation for the line of numbers where the x and y coordinates are identical:
+
+Looking out
+Across the nighttime
+The city winks a sleepless eye
+Hear her voice
+Shake my window
+Sweet seducing sighs
+Get me out
+Into the nighttime
+Four walls won't hold me tonight
+If this town
+Is just an apple
+Then let me take a bite
+
+Intro
+
+A few days ago The Washington Post called Threads as “Meta’s new Twitter clone”. Well, it is hard to deny that Threads is, indeed, too much like Twitter. Correction: old Twitter, the one that was loved by users before Elon Musk took over and brought the changes. But what is the difference between Twitter and Threads from a product perspective? Twitter is a full-blown product whereas Threads is MVP: minimum viable product.
+
+While Twitter totally fits the CRUD rules (create, read, update, delete) from the operational language concept, in Threads you can’t even delete your own account unless you deactivate your Instagram account. Is it a tricky way of keeping people inside the app, or it’s just a consequence of being an MVP — the time will tell.
+
+Twitter itself was introduced in 2006 and it was released as proof of MVP conception. However, over time and with the development of the product, Twitter has significantly expanded its functionality, adding new features such as images, videos, polls, the “retweet” function, and others. The product has become more complex and diverse, which goes beyond a simple MVP.
+
+We are what we pretend to be, so we must be careful about what we pretend to be
+I want to stand as close to the edge as I can without going over. Out on the edge you see all kinds of things you can't see from the center
+How nice -- to feel nothing, and still get full credit for being alive
+There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.
+Many were increasingly of the opinion that they’d all made a big mistake in coming down from the trees in the first place. And some said that even the trees had been a bad move, and that no one should ever have left the oceans.
+
+A common mistake that people make when trying to design something completely foolproof is to underestimate the ingenuity of complete fools.
+
