@@ -15,13 +15,14 @@ def preprocess_sequence(sequence: str) -> str:
     return sequence.lower().translate(str.maketrans('', '', string.punctuation)).replace('\n', ' ').strip()
 
 
-def get_sequence_probability(sequence: str, corpus_counts: dict, n_gram_size: int) -> float:
+def get_sequence_probability(sequence: str, corpus_counts: dict, corpus_counts_one_less: dict,  n_gram_size: int) -> float:
     """
     Returns the probability fo a given sequence in a given corpus, given a certain n-gram-size
     
     args:
         sequence: string of words
         corpus_counts: dictionary of n-grams and their counts
+        corpus_counts_one_less: a dictionary of n-grams not including current word
         n_gram_size: size of n-gram to use
 
     returns:
@@ -40,8 +41,10 @@ def get_sequence_probability(sequence: str, corpus_counts: dict, n_gram_size: in
     for counter in range(0, len(tokenized)-n_gram_size+1):
         # obtaining n-gram
         n_gram = " ".join(tokenized[counter:counter+n_gram_size])
+        n_gram_no_last_word=" ".join(tokenized[counter:counter+n_gram_size-1])
 
-        final_prob *= corpus_counts.get(n_gram, 0) / sum_n_gram_counts
+        # returning final prob given space of context
+        final_prob *= corpus_counts.get(n_gram, 0) / corpus_counts_one_less.get(n_gram_no_last_word, 1)
     # returning final probability
     return final_prob
     
@@ -51,16 +54,18 @@ def get_next_word_prediction(sequence: str, corpus: str, n_gram_size:int = 2) ->
 
     # reprocessing to get counts dict for larger sequences (n-grams plus sequence)
     corpus_n_grams = preprocess_corpus(corpus, n_gram_size)
+    words = preprocess_sequence(corpus).split(" ")
+    corpus_n_grams_one_less = preprocess_corpus(corpus, n_gram_size-1)
     probs = []
     
     # checking every extension of sequence
-    for word in corpus_n_grams.keys():
+    for word in words:
 
         # figuring out sequence with next word
         current_seq = sequence + ' ' + word
 
         # getting probability of sequence with word and appending to list
-        current_seq_prob = get_sequence_probability(current_seq, corpus_n_grams, n_gram_size)
+        current_seq_prob = get_sequence_probability(current_seq, corpus_n_grams, corpus_n_grams_one_less, n_gram_size)
         probs.append((current_seq_prob, current_seq))
 
     # custom sorting for sequence probabilities
@@ -116,10 +121,11 @@ if __name__ == "__main__":
         corpus = corpus_reader.read()
 
     corpus_counts = preprocess_corpus(corpus, args.n_gram)
+    corpus_counts_one_less = preprocess_corpus(corpus, args.n_gram-1)
 
 
     # 2. use corpus to return the probability of the sequence
-    print(get_sequence_probability(proc_seq, corpus_counts, args.n_gram))
+    print(get_sequence_probability(proc_seq, corpus_counts,corpus_counts_one_less, args.n_gram))
     print(f"Next word prediction: {get_next_word_prediction(proc_seq, corpus, args.n_gram)}")
     
     # 3. predict next word in the sequence
