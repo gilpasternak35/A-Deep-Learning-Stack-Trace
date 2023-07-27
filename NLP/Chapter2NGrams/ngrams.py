@@ -1,5 +1,6 @@
 import argparse
 import string
+import math 
 
 
 def preprocess_sequence(sequence: str) -> str:
@@ -32,7 +33,7 @@ def get_sequence_probability(sequence: str, corpus_counts: dict, corpus_counts_o
     tokenized = sequence.split(" ")
 
     # conditional probability multiplier
-    final_prob = 1
+    final_prob = 0
 
     # sum n-gram counts
     sum_n_gram_counts = sum(corpus_counts.values())
@@ -44,9 +45,11 @@ def get_sequence_probability(sequence: str, corpus_counts: dict, corpus_counts_o
         n_gram_no_last_word=" ".join(tokenized[counter:counter+n_gram_size-1])
 
         # returning final prob given space of context
-        final_prob *= corpus_counts.get(n_gram, 0) / corpus_counts_one_less.get(n_gram_no_last_word, 1)
+        # using log prob as to avoid underflow, and adding 0.0001 to avoid 0 probabilities
+        final_prob += math.log(corpus_counts.get(n_gram, 0.0001) / corpus_counts_one_less.get(n_gram_no_last_word, 1))
+
     # returning final probability
-    return final_prob
+    return math.exp(final_prob)
     
 
 def get_next_word_prediction(sequence: str, corpus: str, n_gram_size:int = 2) -> float:
