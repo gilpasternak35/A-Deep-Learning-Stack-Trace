@@ -1,6 +1,7 @@
 import argparse
 import string
 import math 
+import random
 
 
 def preprocess_sequence(sequence: str) -> str:
@@ -14,6 +15,56 @@ def preprocess_sequence(sequence: str) -> str:
         string of words with no punctuation, newlines, or lowercase
     """
     return sequence.lower().translate(str.maketrans('', '', string.punctuation)).replace('\n', ' ').strip()
+
+
+def sample(corpus_counts: dict) -> str:
+    """Samples a word"""
+    # building a cumulative probability range for every word
+    cum_probs = []
+    corresponding_words = []
+    curr_prob = 0
+    sum_corpus_counts = sum(corpus_counts.values())
+    for word, count in corpus_counts.items():
+
+        # cummulative proability range creation, as dictated by word counts
+        cum_probs.append((curr_prob, curr_prob + count/sum_corpus_counts))
+        curr_prob += count/sum_corpus_counts
+
+        # appending corresponding word to probability range for the maintanence of consistency
+        corresponding_words.append(word)
+
+    print(cum_probs, corresponding_words)
+
+    # sampling a random number
+    rand_prob = random.randint(0,10_000)/10_000
+
+    # finding the word corresponding to the uniform probability
+    for idx, prob_range in enumerate(cum_probs):
+        if prob_range[0] <= rand_prob <= prob_range[1]:
+            return corresponding_words[idx]
+
+    # if not found in given probability range   
+    return "Error"
+
+
+def model_sample(corpus_counts: dict, corpus_counts_one_gram: dict) -> str:
+    """
+    Samples a random sentence from the n-gram language model.
+
+    :param: corpus_counts: dictionary of n-grams and their counts
+    :param: corpus_counts_one_gram: dictionary of 1-grams and their counts
+
+    :returns: a string, the sampled sentence
+    """
+    # obtaining first word
+    sen = sample(corpus_counts_one_gram)
+
+    # lining up values by probability so that they can be sampled by respective probabilities
+    # repeatedly sampling until EOS token is sampled
+    # returning sampled sentence
+
+    return sen
+
 
 
 def get_sequence_probability(sequence: str, corpus_counts: dict, corpus_counts_one_less: dict,  n_gram_size: int) -> float:
@@ -34,9 +85,6 @@ def get_sequence_probability(sequence: str, corpus_counts: dict, corpus_counts_o
 
     # conditional probability multiplier
     final_prob = 0
-
-    # sum n-gram counts
-    sum_n_gram_counts = sum(corpus_counts.values())
 
     # probability updates
     for counter in range(0, len(tokenized)-n_gram_size+1):
@@ -103,6 +151,9 @@ def preprocess_corpus(corpus: str, n_gram_size: int) -> dict:
         # hashing
         counts[current_n_gram] = counts.get(current_n_gram, 0) + 1
 
+    if ' ' in counts.keys():
+        counts.pop(' ')
+
     return counts
 
 
@@ -112,6 +163,8 @@ if __name__ == "__main__":
     parser.add_argument('--corpus', type = str, default='corpus.txt', required=False)
     parser.add_argument('--sequence', type = str, default='check this', required=False)
     parser.add_argument('--n-gram', type = int, default=2, required=False)
+    parser.add_argument('--sample', type = bool, default=True, required=False)
+
 
     # parsing argument
     args = parser.parse_args()
@@ -125,10 +178,18 @@ if __name__ == "__main__":
 
     corpus_counts = preprocess_corpus(corpus, args.n_gram)
     corpus_counts_one_less = preprocess_corpus(corpus, args.n_gram-1)
+    corpus_counts_one_gram = preprocess_corpus(corpus, 1)
 
 
     # 2. use corpus to return the probability of the sequence
     print(get_sequence_probability(proc_seq, corpus_counts,corpus_counts_one_less, args.n_gram))
-    print(f"Next word prediction: {get_next_word_prediction(proc_seq, corpus, args.n_gram)}")
-    
+
     # 3. predict next word in the sequence
+    print(f"Next word prediction: {get_next_word_prediction(proc_seq, corpus, args.n_gram)}")
+
+    # 4. sample a random sentence from the model
+    if args.sample:
+        print(f"Sampled sentence: {model_sample(corpus_counts, corpus_counts_one_gram)}")
+
+    
+    
