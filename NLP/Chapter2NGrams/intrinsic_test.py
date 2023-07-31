@@ -20,10 +20,12 @@ for sequence in test_corpuses.values():
         counts_dict_one_less = preprocess_corpus(train_corpus, n-1)
 
         # displaying probability, based of sequence, counts dict, counts dict of prior, and model choice
-        print(f"n: {n}, sequence: {sequence}, prob; {get_sequence_probability(sequence, counts_dict, counts_dict_one_less, n)}")
+        seq_prob = max(5e-100, get_sequence_probability(sequence, counts_dict, counts_dict_one_less, n))
+        
+        print(f"n: {n}, sequence: {sequence}, prob: {seq_prob}, perplexity: {seq_prob**(-1/(len(sequence)-n+1))}")
 
 
-# Conclusion: as n gets larger, the model is forced to multiply more and more probabilities, rendering the sequence unlikely. 
+# Conclusion: as n gets larger, the model is forced to multiply more and more probabilities,ß rendering the sequence unlikely. 
 # This means that sequences which do less multiplications (the larger n-grams, do to your sliding window mechanism) will be more likely
 # generally seems that n=3/4 is best for this corpus
 # some n-grams will be much more likely than others, especially is correspond to something in training set
