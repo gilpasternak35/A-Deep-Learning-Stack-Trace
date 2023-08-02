@@ -33,7 +33,7 @@ def sample(corpus_counts: dict) -> str:
         # appending corresponding word to probability range for the maintanence of consistency
         corresponding_words.append(word)
 
-    print(cum_probs, corresponding_words)
+    print(cum_probs)
 
     # sampling a random number
     rand_prob = random.randint(0,10_000)/10_000
@@ -44,24 +44,67 @@ def sample(corpus_counts: dict) -> str:
             return corresponding_words[idx]
 
     # if not found in given probability range   
-    return "Error"
+    return "hello"
 
 
-def model_sample(corpus_counts: dict, corpus_counts_one_gram: dict) -> str:
+def model_sample(corpus: str, n: int, eos_prob: float = 0.05) -> str:
     """
     Samples a random sentence from the n-gram language model.
 
-    :param: corpus_counts: dictionary of n-grams and their counts
-    :param: corpus_counts_one_gram: dictionary of 1-grams and their counts
+    :param: corpus: the language model's corpus
+    :param: n: the n-gram model to use
+    :param eos_prob: the probability that the next token will be an end of sentence token (the sentence will end and the result will be returned)
 
     :returns: a string, the sampled sentence
     """
     # obtaining first word
+    corpus_counts_one_gram = preprocess_corpus(corpus=corpus, n_gram_size=1)
     sen = sample(corpus_counts_one_gram)
 
-    # lining up values by probability so that they can be sampled by respective probabilities
-    # repeatedly sampling until EOS token is sampled
-    # returning sampled sentence
+    # boolean denoting whether constructed sentence should end and be returned
+    return_sentence = False
+
+    # corpus counts dictionary
+    corpus_counts = {}
+
+    def n_gram_contains_context_at_beginning(context: str, n_gram: str) -> bool:
+        """
+        Tests if a potential n-gram evaluated as a viable extension of a context indeed
+        has that context in the beginning of the n-gram
+
+        :param context - a context string to be exteneded
+        :param n_gram - an n-gram to be evaluated to check if it contains the context
+
+        :returns: a boolean denoting whether the n-gram contains the context at the beginning
+        """
+        # attempting to find the index of the context, if at beginning return true,
+        # if not at beginning or not in n-gram at all return false
+        try:
+            return n_gram.index(context) == 0
+        except ValueError:
+            return False
+
+
+    # appending words repeatedly to first word
+    while not return_sentence:
+        # n-gram either set to value of n or using maximal context otherwise available
+        curr_n = min(n, len(sen.split(" "))+1)
+        
+        # rebuilding corpus counts if necessary (if previous n size was at unstable value, didn't utilize full n)
+        if len(sen.split(" ")) < n:
+            corpus_counts = preprocess_corpus(corpus, curr_n)
+
+        # filtering corpus by sequences with proper "context" getting only n-grams that have previous words as context
+        # only needed if n > 1 as otherwise we don't really care about context
+
+        if curr_n > 1:
+            corpus_counts_filtered = {k: (v if n_gram_contains_context_at_beginning(sen[-curr_n+1:], k) else 0.01) for k,v in corpus_counts.items()}
+
+        # sampling and appending final word
+        sen += " " + sample(corpus_counts_filtered).split(" ")[-1]
+
+        # EOS decision
+        return_sentence = random.random() <= eos_prob
 
     return sen
 
@@ -120,7 +163,7 @@ def get_next_word_prediction(sequence: str, corpus: str, n_gram_size:int = 2) ->
         probs.append((current_seq_prob, current_seq))
 
     # custom sorting for sequence probabilities
-    probs  = sorted(probs, reverse=True, key=lambda x: x[0])
+    probs = sorted(probs, reverse=True, key=lambda x: x[0])
 
     # returning most likely sequence
     return probs[0][1]
@@ -151,8 +194,12 @@ def preprocess_corpus(corpus: str, n_gram_size: int) -> dict:
         # hashing
         counts[current_n_gram] = counts.get(current_n_gram, 0) + 1
 
-    if ' ' in counts.keys():
-        counts.pop(' ')
+    unwanted_chars = ['', ' ', '\n', '-']
+
+    # removing unwanted characters
+    for char in unwanted_chars:
+        if char in counts.keys():
+            counts.pop(char)
 
     return counts
 
@@ -189,7 +236,7 @@ if __name__ == "__main__":
 
     # 4. sample a random sentence from the model
     if args.sample:
-        print(f"Sampled sentence: {model_sample(corpus_counts, corpus_counts_one_gram)}")
+        print(f"Sampled sentence: {model_sample(corpus, args.n_gram)}")
 
     
     
