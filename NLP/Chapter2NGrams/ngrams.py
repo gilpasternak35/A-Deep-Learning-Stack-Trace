@@ -33,14 +33,13 @@ def sample(corpus_counts: dict) -> str:
         # appending corresponding word to probability range for the maintanence of consistency
         corresponding_words.append(word)
 
-    print(cum_probs)
-
     # sampling a random number
     rand_prob = random.randint(0,10_000)/10_000
 
     # finding the word corresponding to the uniform probability
     for idx, prob_range in enumerate(cum_probs):
         if prob_range[0] <= rand_prob <= prob_range[1]:
+            print(f"word chosen with probability: {prob_range[1] - prob_range[0]}")
             return corresponding_words[idx]
 
     # if not found in given probability range   
@@ -98,7 +97,7 @@ def model_sample(corpus: str, n: int, eos_prob: float = 0.05) -> str:
         # only needed if n > 1 as otherwise we don't really care about context
 
         if curr_n > 1:
-            corpus_counts_filtered = {k: (v if n_gram_contains_context_at_beginning(sen[-curr_n+1:], k) else 0.01) for k,v in corpus_counts.items()}
+            corpus_counts_filtered = {k: (v if n_gram_contains_context_at_beginning(sen[-curr_n+1:], k) else 0.001) for k,v in corpus_counts.items()}
 
         # sampling and appending final word
         sen += " " + sample(corpus_counts_filtered).split(" ")[-1]
