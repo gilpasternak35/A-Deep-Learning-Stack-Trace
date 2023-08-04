@@ -1,5 +1,6 @@
 # A file for experiments with dealing with previously unseen words
 from ngrams import preprocess_sequence, preprocess_corpus
+import argparse
 
 def compute_unk_rate_from_corpus(training_corpus: str, val_corpus: str) -> float:
     """
@@ -23,7 +24,22 @@ def compute_unk_rate_by_threshold(training_corpus: str, threshold: int) -> float
     return sum(list(map(lambda x: x < threshold, list(corpus_counts.values())))) / len(corpus_counts)
 
 
-#def compute_unk_rate_by_ranking(training_corpus: str, bottom_pct_unk: float) -> float:
+def compute_unk_rate_by_ranking(training_corpus: str, bottom_pct_unk: float) -> float:
+    """
+    Uses a ranking threshold to decide what qualifies as unknown, making the bottom k pct and anything tied with it unknown.
+    Good for semi-fixing percentage of unknown values
+    """
+    corpus_counts = preprocess_corpus(training_corpus, n_gram_size=1)
+
+    # obtaining values to sort by ascending order, then obtaining all counts tied with the bottom k%
+    corpus_count_vals = sorted(list(corpus_counts.values()))
+
+    # obtaining figure for bottom k% (chosen threshold)
+    threshold = corpus_count_vals[int(len(corpus_count_vals) * bottom_pct_unk/100)]
+
+    print(f"count threshold for being in bottom {bottom_pct_unk} percent of counts: {threshold}")
+    return compute_unk_rate_by_threshold(training_corpus, threshold)
+
 
 
 if __name__ == "__main__":
@@ -35,6 +51,13 @@ if __name__ == "__main__":
     with open('val_corpus.txt', 'r') as val_corpus_reader:
         val_corpus = val_corpus_reader.read()
 
+    # parsing arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--threshold", type=int, default=2, required=False)
+    parser.add_argument("--ranking-percentile", type=float, default=72.0, required=False)
+    args = parser.parse_args()
+
     # 40% of american pie song was unknown to my corpus!!
     print(f"Unknown word rate by val corpus: {compute_unk_rate_from_corpus(train_corpus, val_corpus)}")
-    print(f"Unknown word rate by word counts below threshold: {compute_unk_rate_by_threshold(train_corpus, 2)}")
+    print(f"Unknown word rate by word counts below threshold {args.threshold}: {compute_unk_rate_by_threshold(train_corpus, args.threshold)}")
+    print(f"Unknown word rate by word counts below percentile {args.ranking_percentile}: {compute_unk_rate_by_ranking(train_corpus, args.ranking_percentile)}")
