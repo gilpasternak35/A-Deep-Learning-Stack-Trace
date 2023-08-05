@@ -2,6 +2,7 @@ import argparse
 import string
 import math 
 import random
+from itertools import permutations
 
 
 def preprocess_sequence(sequence: str) -> str:
@@ -46,7 +47,7 @@ def sample(corpus_counts: dict) -> str:
     return "hello"
 
 
-def model_sample(corpus: str, n: int, eos_prob: float = 0.05) -> str:
+def model_sample(corpus: str, n: int, eos_prob: float = 0.05, smoothing=True) -> str:
     """
     Samples a random sentence from the n-gram language model.
 
@@ -73,6 +74,7 @@ def model_sample(corpus: str, n: int, eos_prob: float = 0.05) -> str:
 
         :param context - a context string to be exteneded
         :param n_gram - an n-gram to be evaluated to check if it contains the context
+        :param smoothing - boolean indicating whether or not to apply laplacian smoothing 
 
         :returns: a boolean denoting whether the n-gram contains the context at the beginning
         """
@@ -91,13 +93,14 @@ def model_sample(corpus: str, n: int, eos_prob: float = 0.05) -> str:
         
         # rebuilding corpus counts if necessary (if previous n size was at unstable value, didn't utilize full n)
         if len(sen.split(" ")) < n:
-            corpus_counts = preprocess_corpus(corpus, curr_n)
+            corpus_counts = preprocess_corpus(corpus, curr_n, smoothing=smoothing, smoothing_k = 0.01)
 
         # filtering corpus by sequences with proper "context" getting only n-grams that have previous words as context
         # only needed if n > 1 as otherwise we don't really care about context
 
         if curr_n > 1:
-            corpus_counts_filtered = {k: (v if n_gram_contains_context_at_beginning(sen[-curr_n+1:], k) else 0.001) for k,v in corpus_counts.items()}
+            corpus_counts_filtered = {k: v for k,v in corpus_counts.items() if n_gram_contains_context_at_beginning(sen[-curr_n+1:], k)}
+            print(corpus_counts_filtered)
 
         # sampling and appending final word
         sen += " " + sample(corpus_counts_filtered).split(" ")[-1]
@@ -168,13 +171,15 @@ def get_next_word_prediction(sequence: str, corpus: str, n_gram_size:int = 2) ->
     return probs[0][1]
 
 
-def preprocess_corpus(corpus: str, n_gram_size: int) -> dict:
+def preprocess_corpus(corpus: str, n_gram_size: int, smoothing: bool = False, smoothing_k: float = 1.0) -> dict:
     """
     Segments corpus and turns it into an n-gram counts hashmap
     
     args:
         corpus: string of words
         n_gram_size: size of n-gram to use
+        smoothing: whether or not to apply laplacian smoothing
+        smoothing_k: the value to use as a smoothing k (default count) for non-existent n-grams if laplacian smoothing is used
 
     returns:
         dictionary of n-grams and their counts
@@ -190,8 +195,22 @@ def preprocess_corpus(corpus: str, n_gram_size: int) -> dict:
         # attaining current n-gram (combining words from list)
         current_n_gram = " ".join(corpus_processed[i:i+n_gram_size])
 
-        # hashing
-        counts[current_n_gram] = counts.get(current_n_gram, 0) + 1
+        # hashing - starting with default k
+        default_val = smoothing_k if smoothing else 0
+        counts[current_n_gram] = counts.get(current_n_gram, default_val) + 1
+
+    # for unseen n_grams
+    if smoothing:
+        pmts = permutations(corpus_processed, r=n_gram_size-1)
+        
+        # iterating through permutations and assigning them smoothing value
+        for permutation in pmts:
+            permutation_as_str = " ".join(permutation)
+
+            # if permutation yet to be seen, assigning it miniscule smoothing value
+            if permutation_as_str not in counts:
+                counts[permutation_as_str] = smoothing_k
+        
 
     unwanted_chars = ['', ' ', '\n', '-']
 
