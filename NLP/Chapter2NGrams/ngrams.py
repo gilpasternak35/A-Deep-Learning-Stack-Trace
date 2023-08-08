@@ -40,7 +40,6 @@ def sample(corpus_counts: dict) -> str:
     # finding the word corresponding to the uniform probability
     for idx, prob_range in enumerate(cum_probs):
         if prob_range[0] <= rand_prob <= prob_range[1]:
-            print(f"word chosen with probability: {prob_range[1] - prob_range[0]}")
             return corresponding_words[idx]
 
     # if not found in given probability range   
@@ -98,11 +97,11 @@ def model_sample(corpus: str, n: int, eos_prob: float = 0.05, smoothing=True) ->
         # filtering corpus by sequences with proper "context" getting only n-grams that have previous words as context
         # only needed if n > 1 as otherwise we don't really care about context
 
+        last_n_words = " ".join(sen.split(" ")[-curr_n+1:])
         if curr_n > 1:
-            corpus_counts_filtered = {k: v for k,v in corpus_counts.items() if n_gram_contains_context_at_beginning(sen[-curr_n+1:], k)}
-            print(corpus_counts_filtered)
+            # filtering by n-grams that contain last n words as beginning
+            corpus_counts_filtered = {k: v for k,v in corpus_counts.items() if n_gram_contains_context_at_beginning(last_n_words, k)}
 
-        # sampling and appending final word
         sen += " " + sample(corpus_counts_filtered).split(" ")[-1]
 
         # EOS decision
