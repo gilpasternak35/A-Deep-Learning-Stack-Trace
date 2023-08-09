@@ -43,7 +43,7 @@ def sample(corpus_counts: dict) -> str:
             return corresponding_words[idx]
 
     # if not found in given probability range   
-    return "hello"
+    return "the"
 
 
 def model_sample(corpus: str, n: int, eos_prob: float = 0.05, smoothing=True) -> str:
@@ -99,6 +99,7 @@ def model_sample(corpus: str, n: int, eos_prob: float = 0.05, smoothing=True) ->
 
         last_n_words = " ".join(sen.split(" ")[-curr_n+1:])
         if curr_n > 1:
+            # TODO: add backoff here and linear interpolation in preprocess corpus
             # filtering by n-grams that contain last n words as beginning
             corpus_counts_filtered = {k: v for k,v in corpus_counts.items() if n_gram_contains_context_at_beginning(last_n_words, k)}
 
@@ -228,6 +229,7 @@ if __name__ == "__main__":
     parser.add_argument('--sequence', type = str, default='check this', required=False)
     parser.add_argument('--n-gram', type = int, default=2, required=False)
     parser.add_argument('--sample', type = bool, default=True, required=False)
+    parser.add_argument('--smoothing', type=bool, default=False, required=False)
 
 
     # parsing argument
@@ -253,7 +255,7 @@ if __name__ == "__main__":
 
     # 4. sample a random sentence from the model
     if args.sample:
-        print(f"Sampled sentence: {model_sample(corpus, args.n_gram)}")
+        print(f"Sampled sentence: {model_sample(corpus, args.n_gram, smoothing=args.smoothing)}")
 
     
     
