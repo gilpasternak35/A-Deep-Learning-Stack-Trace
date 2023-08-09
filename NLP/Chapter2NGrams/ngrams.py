@@ -189,8 +189,8 @@ def preprocess_corpus(corpus: str, n_gram_size: int, smoothing: bool = False, sm
     # counts dictionary
     counts = {}
 
-    # iterating and hashing corpus words
-    for i in range(len(corpus) - n_gram_size-1):
+    # iterating and hashing corpus words - ensuring that don't exceed corpus boundary (use only n-grams from corpus)
+    for i in range(len(corpus_processed) - n_gram_size):
         # attaining current n-gram (combining words from list)
         current_n_gram = " ".join(corpus_processed[i:i+n_gram_size])
 
@@ -200,7 +200,7 @@ def preprocess_corpus(corpus: str, n_gram_size: int, smoothing: bool = False, sm
 
     # for unseen n_grams
     if smoothing:
-        pmts = permutations(corpus_processed, r=n_gram_size-1)
+        pmts = permutations(corpus_processed, r=n_gram_size)
         
         # iterating through permutations and assigning them smoothing value
         for permutation in pmts:
