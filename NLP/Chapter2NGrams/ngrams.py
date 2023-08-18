@@ -46,7 +46,7 @@ def sample(corpus_counts: dict) -> str:
     return "the"
 
 
-def model_sample(corpus: str, n: int, eos_prob: float = 0.05, smoothing=True) -> str:
+def model_sample(corpus: str, n: int, eos_prob: float = 0.05, smoothing=False, backoff=False) -> str:
     """
     Samples a random sentence from the n-gram language model.
 
@@ -56,6 +56,9 @@ def model_sample(corpus: str, n: int, eos_prob: float = 0.05, smoothing=True) ->
 
     :returns: a string, the sampled sentence
     """
+    # if smoothing used, backoff will never be used
+    assert not (smoothing and backoff), "use of smoothing automatically implies backoff will never be used"
+
     # obtaining first word
     corpus_counts_one_gram = preprocess_corpus(corpus=corpus, n_gram_size=1)
     sen = sample(corpus_counts_one_gram)
@@ -91,8 +94,7 @@ def model_sample(corpus: str, n: int, eos_prob: float = 0.05, smoothing=True) ->
         curr_n = min(n, len(sen.split(" "))+1)
         
         # rebuilding corpus counts if necessary (if previous n size was at unstable value, didn't utilize full n)
-        if len(sen.split(" ")) < n:
-            corpus_counts = preprocess_corpus(corpus, curr_n, smoothing=smoothing, smoothing_k = 0.01)
+        corpus_counts = preprocess_corpus(corpus, curr_n, smoothing=smoothing, smoothing_k = 0.1)
 
         # filtering corpus by sequences with proper "context" getting only n-grams that have previous words as context
         # only needed if n > 1 as otherwise we don't really care about context
@@ -103,11 +105,31 @@ def model_sample(corpus: str, n: int, eos_prob: float = 0.05, smoothing=True) ->
             # filtering by n-grams that contain last n words as beginning
             corpus_counts_filtered = {k: v for k,v in corpus_counts.items() if n_gram_contains_context_at_beginning(last_n_words, k)}
 
-        sen += " " + sample(corpus_counts_filtered).split(" ")[-1]
+            if len(corpus_counts_filtered) == 0:
+                print(f'No n-grams found for prefix "{last_n_words}"')
+
+            # setting up a temporary n in case of backoff
+            temp_n=curr_n
+
+            while len(corpus_counts_filtered) == 0 and backoff and temp_n > 1:
+                # backing off to a smaller n-gram
+                print(f"back off to n={temp_n-1}")
+                temp_n = temp_n - 1
+                corpus_counts = preprocess_corpus(corpus, temp_n, smoothing=smoothing, smoothing_k = 0.1)
+                last_n_words_temp = " ".join(sen.split(" ")[-temp_n+1:])
+
+                # rebuilding corpus counts filtered with smaller n-gram size
+                corpus_counts_filtered = corpus_counts if temp_n==1 else {k: v for k,v in corpus_counts.items() if n_gram_contains_context_at_beginning(last_n_words_temp, k)}
+
+        # sampling from model, one gram if no availabilities
+        print('sampling from model...')
+        print(corpus_counts_filtered)
+        sen += " " + (sample(corpus_counts_filtered).split(" ")[-1] if len(corpus_counts_filtered) != 0 else sample(corpus_counts_one_gram))
 
         # EOS decision
         return_sentence = random.random() <= eos_prob
 
+    print('returning result...')
     return sen
 
 
@@ -191,7 +213,7 @@ def preprocess_corpus(corpus: str, n_gram_size: int, smoothing: bool = False, sm
     counts = {}
 
     # iterating and hashing corpus words - ensuring that don't exceed corpus boundary (use only n-grams from corpus)
-    for i in range(len(corpus_processed) - n_gram_size):
+    for i in range(len(corpus_processed) - n_gram_size+1):
         # attaining current n-gram (combining words from list)
         current_n_gram = " ".join(corpus_processed[i:i+n_gram_size])
 
@@ -201,15 +223,15 @@ def preprocess_corpus(corpus: str, n_gram_size: int, smoothing: bool = False, sm
 
     # for unseen n_grams
     if smoothing:
-        pmts = permutations(corpus_processed, r=n_gram_size)
+        print('smoothing counts... (this may take a while)')
+        pmts = get_k_random_permutations(corpus_processed, size=n_gram_size, k=1000)
         
         # iterating through permutations and assigning them smoothing value
         for permutation in pmts:
-            permutation_as_str = " ".join(permutation)
 
             # if permutation yet to be seen, assigning it miniscule smoothing value
-            if permutation_as_str not in counts:
-                counts[permutation_as_str] = smoothing_k
+            if permutation not in counts:
+                counts[permutation] = smoothing_k
         
 
     unwanted_chars = ['', ' ', '\n', '-']
@@ -217,9 +239,43 @@ def preprocess_corpus(corpus: str, n_gram_size: int, smoothing: bool = False, sm
     # removing unwanted characters
     for char in unwanted_chars:
         if char in counts.keys():
+            print(f'removing key {char}')
             counts.pop(char)
 
+    # removing chars we don't want in the context of a key (if no next char then don't want newline/space as continuation)
+    unwanted_chars_in_keys=['\n']
+    counts_keys =  list(counts.keys())
+
+    for key in counts_keys:
+        for char in unwanted_chars_in_keys:
+            if char in key:
+                counts.pop(key)
+                print('removing key {key}')
+
     return counts
+
+
+def get_k_random_permutations(corpus_lexicon: list, size: int = 2, k:int=100) -> list:
+    """Returns k random word combination permutations of size {size}"""
+    counter = 0 
+    final_permutations = []
+
+    for i in range(k):
+        curr_word = []
+
+        # building a random word permutation
+        for word_idx in range(size):
+            curr_word.append(corpus_lexicon[random.randint(0, len(corpus_lexicon))-1])
+
+        # appending to list of word permutations
+        final_permutations.append(" ".join(curr_word))
+
+    return final_permutations
+
+        
+
+
+
 
 
 if __name__ == "__main__":
@@ -230,11 +286,12 @@ if __name__ == "__main__":
     parser.add_argument('--n-gram', type = int, default=2, required=False)
     parser.add_argument('--sample', type = bool, default=True, required=False)
     parser.add_argument('--smoothing', type=bool, default=False, required=False)
+    parser.add_argument('--backoff', type=bool, default=False, required=False)
 
 
     # parsing argument
     args = parser.parse_args()
-    
+
     # 1. preprocess the sequence and corpus
     proc_seq = preprocess_sequence(args.sequence)
 
@@ -254,8 +311,16 @@ if __name__ == "__main__":
     print(f"Next word prediction: {get_next_word_prediction(proc_seq, corpus, args.n_gram)}")
 
     # 4. sample a random sentence from the model
+
     if args.sample:
-        print(f"Sampled sentence: {model_sample(corpus, args.n_gram, smoothing=args.smoothing)}")
+        # explaining sampling methodology
+        if args.smoothing:
+            print('sampling from model with smoothing')
+
+        if args.backoff:
+            print('sampling from model with backoff')
+
+        print(f"Sampled sentence: {model_sample(corpus, args.n_gram, smoothing=args.smoothing, backoff=args.backoff)}")
 
     
     
