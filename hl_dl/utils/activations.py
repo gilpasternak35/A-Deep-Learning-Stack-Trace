@@ -7,3 +7,8 @@ class Activation:
     def relu(inp: float) -> float:
         """Rectified Linear Unit function: returns input if input >=0, else 0. Function cannot be negative."""
         return max(inp, 0)
+    
+    @staticmethod
+    def identity(inp: float) -> float:
+        """identity activation for output layers"""
+        return inp
